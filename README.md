@@ -4,9 +4,9 @@
 
 En esta práctica, hemos explorado el funcionamiento de un sistema operativo en tiempo real utilizando el ESP32 y FreeRTOS. Se han creado varias tareas para entender cómo se ejecutan de manera concurrente y cómo se gestiona el tiempo de CPU.
 
-## Ejercicio Práctica 1
+## Ejercicio Práctico A: 
 
-### Código para la práctica 1
+### Código para la práctica A
 
 ```cpp
 #include <Arduino.h>
@@ -51,7 +51,7 @@ void loop() {
 
 La salida por el puerto serie muestra dos líneas de mensajes que se imprimen cada segundo:
 
-```cpp
+```
 this is ESP32 Task
 this is another Task
 ```
@@ -63,11 +63,87 @@ El código proporcionado crea dos tareas utilizando FreeRTOS: una tarea principa
 
 ```mermaid
 graph TD;
-    A[Inicio] --> B[Configuración Inicial];
-    B --> C[Bucle Principal (loop())];
-    C --> D[Tarea Adicional (anotherTask())];
+    A[Set Up] --> B[Configuración Inicial];
+    B --> C[loop];
+    C --> E[Tarea Loop]
+    E --> C
+    C --> D[Tarea RTOS];
     D --> C;
 ```
 
+## Ejercicio Práctico B: 
+
+### Código para la práctica B
+
+```cpp
+#include <Arduino.h>
+#include <FreeRTOS.h>
+#include <task.h>
+#include <semphr.h> 
+
+const int ledPin = 15;
+
+void tareaEncender(void *parameter);
+void tareaApagar(void *parameter);
+
+SemaphoreHandle_t semaforo;
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(ledPin, OUTPUT);
+
+  semaforo = xSemaphoreCreateBinary();
+  
+  xTaskCreate(tareaEncender, "Encender LED", 1000, NULL, 1, NULL);
+  xTaskCreate(tareaApagar, "Apagar LED", 1000, NULL, 1, NULL);
+}
+
+void loop() {
+  // No hay código en el loop
+}
+
+void tareaEncender(void *parameter) {
+  for (;;) {
+    xSemaphoreTake(semaforo, portMAX_DELAY);
+
+    digitalWrite(ledPin, HIGH);
+    Serial.println("LED Encendido");
+    vTaskDelay(pdMS_TO_TICKS(1000)); // Paramos la tarea durante un segundo
+  }
+}
+
+void tareaApagar(void *parameter) {
+  for (;;) {
+    xSemaphoreTake(semaforo, portMAX_DELAY);
+
+    digitalWrite(ledPin, LOW);
+    Serial.println("LED Apagado");
+    vTaskDelay(pdMS_TO_TICKS(1000)); // Paramos la tarea durante un segundo
+  }
+}
+```
+
+### Descripción de la Salida por el Puerto Serie
+
+La salida por el puerto serie muestra los siguientes mensajes en función de las tareas que se ejecutan:
+
+```cpp
+LED Encendido
+LED Apagado
+```
 
 
+### Explicación del Funcionamiento
+
+El código implementa dos tareas utilizando FreeRTOS: `tareaEncender` y `tareaApagar`. Ambas tareas intentan tomar un semáforo para controlar el acceso al LED. Solo una tarea puede encender o apagar el LED a la vez, garantizando una sincronización correcta mediante el semáforo.
+
+```mermaid
+graph TD;
+    A[Set Up] --> B[Configuración Inicial];
+    B --> C[Creación de Tareas];
+    C --> D[Loop];
+    D --> E[Tarea Encender];
+    D --> F[Tarea Apagar];
+    E --> E;
+    F --> F;
+```

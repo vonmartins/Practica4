@@ -1,38 +1,49 @@
 #include <Arduino.h>
 #include <FreeRTOS.h>
 #include <task.h>
+#include <semphr.h> 
 
-/* this function will be invoked when additionalTask was created */
-void anotherTask( void * parameter ) {
-  /* loop forever */
-  for(;;) {
-    Serial.println("this is another Task");
-    vTaskDelay(1000);
-  }
+const int ledPin = 15;
 
-  /* delete a task when finish,
-  this will never happen because this is infinity loop */
-  vTaskDelete( NULL );
-}
+void tareaEncender(void *parameter);
+void tareaApagar(void *parameter);
+
+SemaphoreHandle_t semaforo;
 
 void setup() {
-  Serial.begin(112500);
-  /* we create a new task here */
-  xTaskCreate(
-    anotherTask, /* Task function. */
-    "another Task", /* name of task. */
-    10000, /* Stack size of task */
-    NULL, /* parameter of the task */
-    1, /* priority of the task */
-    NULL
-  ); /* Task handle to keep track of created task */
+  Serial.begin(115200);
+  pinMode(ledPin, OUTPUT);
+
+  semaforo = xSemaphoreCreateBinary();
+  
+  xTaskCreate(tareaEncender, "Encender LED", 1000, NULL, 1, NULL);
+  xTaskCreate(tareaApagar, "Apagar LED", 1000, NULL, 1, NULL);
 }
 
-/* the forever loop() function is invoked by Arduino ESP32 loopTask */
 void loop() {
-  Serial.println("this is ESP32 Task");
-  delay(1000);
+  // No hay código en el loop
 }
+
+void tareaEncender(void *parameter) {
+  for (;;) {
+    xSemaphoreTake(semaforo, portMAX_DELAY);
+
+    digitalWrite(ledPin, HIGH);
+    Serial.println("LED Encendido");
+    vTaskDelay(pdMS_TO_TICKS(1000)); // Paramos la tarea durante un segundo
+  }
+}
+
+void tareaApagar(void *parameter) {
+  for (;;) {
+    xSemaphoreTake(semaforo, portMAX_DELAY);
+
+    digitalWrite(ledPin, LOW);
+    Serial.println("LED Apagado");
+    vTaskDelay(pdMS_TO_TICKS(1000)); // Paramos la tarea durante un segundo
+  }
+}
+
 
 
 
